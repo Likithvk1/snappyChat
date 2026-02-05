@@ -14,8 +14,9 @@ from datetime import datetime, timedelta
 app = FastAPI()
 
 # Serve static files
-# Mount assets (JS/CSS)
-app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
+# Mount assets (JS/CSS) only if they exist (produced by build)
+if os.path.exists("static/assets"):
+    app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
 
 # JWT Configuration
 SECRET_KEY = "your-secret-key-change-in-production"  # Change this in production!
