@@ -13,3 +13,8 @@ chat.db
 # OS
 .DS_Store
 Thumbs.db
+
+# Build Artifacts
+static/
+dist/
+node_modules/

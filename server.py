@@ -14,7 +14,8 @@ from datetime import datetime, timedelta
 app = FastAPI()
 
 # Serve static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Mount assets (JS/CSS)
+app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
 
 # JWT Configuration
 SECRET_KEY = "your-secret-key-change-in-production"  # Change this in production!
@@ -24,6 +25,10 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 @app.get("/")
 async def get_index():
     return FileResponse("static/index.html")
+
+# SPA Catch-all (Must be last) - Handled separately or use exceptions?
+# Usually, we verify if file exists, else return index.html for client-side routing.
+# But for simplicity, we can just rely on the fallback below.
 
 # --- Database ---
 DB_NAME = "chat.db"
