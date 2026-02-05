@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SnappyChat - Real-Time Messaging</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Auth Modal */
+        #authModal {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            animation: fadeIn 0.3s ease;
+            min-width: 400px;
+        }
+
+        #authModal h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 32px;
+        }
+
+        #authModal input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 15px;
+            transition: border 0.3s;
+        }
+
+        #authModal input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        #authModal button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        #authModal button:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Chat Container */
+        #chatContainer {
+            display: none;
+            width: 90%;
+            max-width: 1200px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            animation: fadeIn 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        #chatHeader {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #chatHeader h2 {
+            font-size: 24px;
+        }
+
+        #userInfo {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        #logoutBtn {
+            background: rgba(255, 255, 255, 0.3);
+            border: none;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+
+        #logoutBtn:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Main Chat Area */
+        #chatMain {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Contacts Sidebar */
+        #contactsSidebar {
+            width: 300px;
+            background: #f8f9fa;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #contactsHeader {
+            padding: 15px;
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        #contactsList {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .contact-item {
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .contact-item:hover {
+            background: #e8eaf6;
+        }
+
+        .contact-item.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .contact-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .contact-item.active .contact-avatar {
+            background: white;
+            color: #667eea;
+        }
+
+        .contact-info {
+            flex: 1;
+        }
+
+        .contact-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .contact-status {
+            font-size: 11px;
+            color: #999;
+            margin-top: 2px;
+        }
+
+        .contact-item.active .contact-status {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .unread-badge {
+            background: #ff4444;
+            color: white;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: bold;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        #addContactBtn {
+            margin: 15px;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        #addContactBtn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Chat Area */
+        #chatArea {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Messages Area */
+        #messagesArea {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            animation: slideIn 0.3s ease;
+        }
+
+        .message-received {
+            text-align: left;
+        }
+
+        .message-sent {
+            text-align: right;
+        }
+
+        .message-bubble {
+            display: inline-block;
+            max-width: 60%;
+            padding: 12px 18px;
+            border-radius: 18px;
+            word-wrap: break-word;
+        }
+
+        .message-received .message-bubble {
+            background: white;
+            color: #333;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-sent .message-bubble {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-sender {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .message-time {
+            font-size: 10px;
+            margin-top: 4px;
+            text-align: right;
+            opacity: 0.7;
+        }
+
+        .message-received .message-time {
+            color: #999;
+        }
+
+        .message-sent .message-time {
+            color: #eee;
+        }
+
+        .offline-badge {
+            display: inline-block;
+            background: #ff9800;
+            color: white;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+
+        /* Input Area */
+        #inputArea {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        #inputArea input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        #inputArea input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        #sendBtn {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        #sendBtn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Scrollbar */
+        #messagesArea::-webkit-scrollbar,
+        #contactsList::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #messagesArea::-webkit-scrollbar-track,
+        #contactsList::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        #messagesArea::-webkit-scrollbar-thumb,
+        #contactsList::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Auth Modal -->
+    <div id="authModal">
+        <!-- Login Form -->
+        <div id="loginForm">
+            <h1>🚀 SnappyChat</h1>
+            <p style="color: #999; margin-bottom: 30px;">Login to your account</p>
+            <input type="text" id="loginUsername" placeholder="Username" autofocus>
+            <input type="password" id="loginPassword" placeholder="Password"
+                onkeypress="handleAuthKeyPress(event, 'login')">
+            <button onclick="loginUser()">Login</button>
+            <p style="color: #667eea; font-size: 14px; margin-top: 20px; cursor: pointer;" onclick="showRegister()">
+                Don't have an account? <strong>Register</strong>
+            </p>
+            <p id="loginError" style="color: #f44336; font-size: 12px; margin-top: 10px; display: none;"></p>
+        </div>
+
+        <!-- Registration Form -->
+        <div id="registerForm" style="display: none;">
+            <h1>🚀 SnappyChat</h1>
+            <p style="color: #999; margin-bottom: 30px;">Create a new account</p>
+            <input type="text" id="registerUsername" placeholder="Choose a username">
+            <input type="password" id="registerPassword" placeholder="Password (min 6 characters)">
+            <input type="password" id="registerConfirmPassword" placeholder="Confirm password"
+                onkeypress="handleAuthKeyPress(event, 'register')">
+            <button onclick="registerUser()">Register</button>
+            <p style="color: #667eea; font-size: 14px; margin-top: 20px; cursor: pointer;" onclick="showLogin()">
+                Already have an account? <strong>Login</strong>
+            </p>
+            <p id="registerError" style="color: #f44336; font-size: 12px; margin-top: 10px; display: none;"></p>
+        </div>
+    </div>
+
+    <!-- Chat Container -->
+    <div id="chatContainer">
+        <div id="chatHeader">
+            <h2>💬 SnappyChat</h2>
+            <div id="userInfo">
+                <span>Logged in as: <span id="currentUser"></span></span>
+                <button id="logoutBtn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+        <div id="chatMain">
+            <!-- Contacts Sidebar -->
+            <div id="contactsSidebar">
+                <div id="contactsHeader">📇 Contacts</div>
+                <div id="contactsList">
+                    <div class="empty-state">No contacts yet.<br>Add a contact to start chatting!</div>
+                </div>
+                <button id="addContactBtn" onclick="addContact()">+ Add Contact</button>
+            </div>
+
+            <!-- Chat Area -->
+            <div id="chatArea">
+                <div id="messagesArea">
+                    <div class="empty-state">Select a contact to start messaging</div>
+                </div>
+                <div id="inputArea">
+                    <div class="input-row">
+                        <input type="text" id="messageInput" placeholder="Type your message..."
+                            onkeypress="handleKeyPress(event)" disabled>
+                        <button id="sendBtn" onclick="sendMessage()" disabled>Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws;
+        let currentUsername;
+        let authToken; // JWT token
+        let contacts = [];
+        let selectedContact = null;
+        let messageHistory = {}; // Store messages per contact
+        let unreadCounts = {}; // Track unread messages per contact
+
+        // ===== AUTHENTICATION FUNCTIONS =====
+
+        function showRegister() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+            document.getElementById('registerUsername').focus();
+            document.getElementById('loginError').style.display = 'none';
+        }
+
+        function showLogin() {
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('loginUsername').focus();
+            document.getElementById('registerError').style.display = 'none';
+        }
+
+        async function registerUser() {
+            const username = document.getElementById('registerUsername').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('registerConfirmPassword').value;
+
+            const errorEl = document.getElementById('registerError');
+
+            if (!username || !password || !confirmPassword) {
+                errorEl.textContent = 'All fields are required';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, confirm_password: confirmPassword })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    errorEl.textContent = data.detail || 'Registration failed';
+                    errorEl.style.display = 'block';
+                    return;
+                }
+
+                // Registration successful - auto login
+                authToken = data.token;
+                currentUsername = data.username;
+                startChat();
+
+            } catch (error) {
+                errorEl.textContent = 'Network error. Please try again.';
+                errorEl.style.display = 'block';
+            }
+        }
+
+        async function loginUser() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            const errorEl = document.getElementById('loginError');
+
+            if (!username || !password) {
+                errorEl.textContent = 'Username and password are required';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    errorEl.textContent = data.detail || 'Login failed';
+                    errorEl.style.display = 'block';
+                    return;
+                }
+
+                // Login successful
+                authToken = data.token;
+                currentUsername = data.username;
+                startChat();
+
+            } catch (error) {
+                errorEl.textContent = 'Network error. Please try again.';
+                errorEl.style.display = 'block';
+            }
+        }
+
+        function handleAuthKeyPress(event, formType) {
+            if (event.key === 'Enter') {
+                if (formType === 'login') {
+                    loginUser();
+                } else {
+                    registerUser();
+                }
+            }
+        }
+
+        function startChat() {
+            // Save username and token to sessionStorage (tab-specific)
+            sessionStorage.setItem('currentUsername', currentUsername);
+            sessionStorage.setItem('authToken', authToken);
+            sessionStorage.setItem('isLoggedIn', 'true');
+
+            // Update UI
+            document.getElementById('currentUser').textContent = currentUsername;
+
+            // Load saved contacts and messages
+            loadContacts();
+            loadMessageHistory();
+
+            // Hide auth modal, show chat
+            document.getElementById('authModal').style.display = 'none';
+            document.getElementById('chatContainer').style.display = 'flex';
+
+            // Clear selected contact on fresh start
+            sessionStorage.removeItem('selectedContact');
+            // Connect to WebSocket with token
+            connectWebSocket(currentUsername, authToken);
+        }
+
+
+        function loadContacts() {
+            const saved = localStorage.getItem(`contacts_${currentUsername}`);
+            if (saved) {
+                contacts = JSON.parse(saved);
+                renderContacts();
+            }
+        }
+
+        function loadMessageHistory() {
+            const saved = localStorage.getItem(`messages_${currentUsername}`);
+            if (saved) {
+                messageHistory = JSON.parse(saved);
+            }
+        }
+
+        function saveMessageHistory() {
+            localStorage.setItem(`messages_${currentUsername}`, JSON.stringify(messageHistory));
+        }
+
+        function saveContacts() {
+            localStorage.setItem(`contacts_${currentUsername}`, JSON.stringify(contacts));
+        }
+
+        function addContact() {
+            const contactName = prompt('Enter contact username:');
+            if (!contactName) return;
+
+            const trimmed = contactName.trim();
+            if (!trimmed) {
+                alert('Contact name cannot be empty');
+                return;
+            }
+
+            if (trimmed === currentUsername) {
+                alert('You cannot add yourself as a contact');
+                return;
+            }
+
+            if (contacts.includes(trimmed)) {
+                alert('Contact already exists');
+                return;
+            }
+
+            contacts.push(trimmed);
+            saveContacts();
+            renderContacts();
+        }
+
+        function renderContacts() {
+            const contactsList = document.getElementById('contactsList');
+
+            if (contacts.length === 0) {
+                contactsList.innerHTML = '<div class="empty-state">No contacts yet.<br>Add a contact to start chatting!</div>';
+                return;
+            }
+
+            contactsList.innerHTML = '';
+            contacts.forEach(contact => {
+                const contactDiv = document.createElement('div');
+                contactDiv.className = 'contact-item';
+                if (contact === selectedContact) {
+                    contactDiv.classList.add('active');
+                }
+
+                const initial = contact.charAt(0).toUpperCase();
+                const unreadCount = unreadCounts[contact] || 0;
+                contactDiv.innerHTML = `
+                    <div class="contact-avatar">${initial}</div>
+                    <div class="contact-info">
+                        <div class="contact-name">${contact}</div>
+                        <div class="contact-status">Click to chat</div>
+                    </div>
+                    ${unreadCount > 0 ? `<div class="unread-badge">${unreadCount}</div>` : ''}
+                `;
+
+                contactDiv.onclick = () => selectContact(contact);
+                contactsList.appendChild(contactDiv);
+            });
+        }
+
+        function selectContact(contact) {
+            selectedContact = contact;
+            sessionStorage.setItem('selectedContact', contact);
+            console.log('Contact selected:', contact);
+
+            // Clear unread count for this contact
+            unreadCounts[contact] = 0;
+            renderContacts();
+
+            // Enable input
+            document.getElementById('messageInput').disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+            document.getElementById('messageInput').focus();
+
+            // Load chat history for this contact
+            loadChatHistory(contact);
+        }
+
+        function loadChatHistory(contact) {
+            const messagesArea = document.getElementById('messagesArea');
+            messagesArea.innerHTML = '';
+
+            addSystemMessage(`Chat with ${contact}`);
+
+            // Load previous messages for this contact
+            if (messageHistory[contact]) {
+                messageHistory[contact].forEach(msg => {
+                    displayMessageInDOM(msg.sender, msg.message, msg.isSent, msg.isOffline, msg.timestamp);
+                });
+            }
+        }
+
+        function storeMessage(contact, sender, message, isSent, isOffline = false, timestamp = null) {
+            if (!messageHistory[contact]) {
+                messageHistory[contact] = [];
+            }
+            messageHistory[contact].push({
+                sender: sender,
+                message: message,
+                isSent: isSent,
+                isOffline: isOffline,
+                timestamp: timestamp || new Date().toISOString()
+            });
+
+            // Save to localStorage
+            saveMessageHistory();
+        }
+
+        function connectWebSocket(username, token) {
+            // Use current host (works for localhost and network IP)
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host;
+            ws = new WebSocket(`${wsProtocol}//${host}/ws/${username}?token=${token}`);
+
+            ws.onopen = () => {
+                console.log('Connected to server');
+                addSystemMessage('Connected ✓');
+
+                // Start Heartbeat (Ping every 30s)
+                window.pingInterval = setInterval(() => {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ type: 'ping' }));
+                        console.log('Ping sent');
+                    }
+                }, 30000);
+            };
+
+            ws.onmessage = (event) => {
+                console.log('Message received raw:', event.data);
+                const data = JSON.parse(event.data);
+                // ... rest of logic
+
+                // Auto-add sender to contacts if not exists
+                if (!contacts.includes(data.from)) {
+                    console.log('New contact found:', data.from);
+                    contacts.push(data.from);
+                    saveContacts();
+                    renderContacts();
+                }
+
+                const timestamp = data.timestamp || new Date().toISOString();
+
+                // Store message in history
+                storeMessage(data.from, data.from, data.message, false, data.offline_catchup, timestamp);
+
+                // Check sessionStorage for source of truth
+                const currentSelection = sessionStorage.getItem('selectedContact');
+                console.log(`Checking display (Storage): data.from='${data.from}' vs currentSelection='${currentSelection}'`);
+
+                // If this contact is currently selected, display the message
+                if (data.from === currentSelection) {
+                    console.log('Updating DOM for message...');
+                    try {
+                        displayMessageInDOM(data.from, data.message, false, data.offline_catchup, timestamp);
+                        console.log('DOM updated successfully');
+                    } catch (e) {
+                        console.error('Error updating DOM:', e);
+                    }
+                } else {
+                    console.log('Contact not selected, updating badge');
+                    // Increment unread count
+                    unreadCounts[data.from] = (unreadCounts[data.from] || 0) + 1;
+                    renderContacts();
+
+                    // Auto-select if no contact selected
+                    if (!currentSelection) {
+                        selectContact(data.from);
+                    }
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                // addSystemMessage('Connection error ✗', true); // onclose usually follows
+            };
+
+            ws.onclose = () => {
+                console.log('Disconnected from server');
+                addSystemMessage('Disconnected ✗ - Reconnecting...', true);
+
+                // Stop Heartbeat
+                if (window.pingInterval) {
+                    clearInterval(window.pingInterval);
+                }
+
+                // Auto-reconnect after 3 seconds
+                setTimeout(() => {
+                    if (currentUsername && authToken) {
+                        connectWebSocket(currentUsername, authToken);
+                    }
+                }, 3000);
+            };
+        }
+
+        function sendMessage() {
+            if (!selectedContact) {
+                alert('Please select a contact first');
+                return;
+            }
+
+            const message = document.getElementById('messageInput').value.trim();
+
+            if (!message) {
+                alert('Please enter a message');
+                return;
+            }
+
+            // Send via WebSocket
+            const data = {
+                to: selectedContact,
+                message: message
+            };
+            ws.send(JSON.stringify(data));
+
+            // Generate timestamp
+            const timestamp = new Date().toISOString();
+
+            // Store and display sent message
+            storeMessage(selectedContact, 'You', message, true, false, timestamp);
+            displayMessageInDOM('You', message, true, false, timestamp);
+
+            // Clear input
+            document.getElementById('messageInput').value = '';
+        }
+
+        function displayMessageInDOM(sender, message, isSent, isOffline = false, timestamp = null) {
+            const messagesArea = document.getElementById('messagesArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isSent ? 'message-sent' : 'message-received'}`;
+
+            let timeObj;
+            if (timestamp) {
+                let ts = timestamp;
+                // Fix for SQLite UTC timestamp "YYYY-MM-DD HH:MM:SS" -> "YYYY-MM-DDTHH:MM:SSZ"
+                if (typeof ts === 'string' && !ts.includes('T') && !ts.endsWith('Z')) {
+                    ts = ts.replace(' ', 'T') + 'Z';
+                }
+                timeObj = new Date(ts);
+            } else {
+                timeObj = new Date();
+            }
+            const timeStr = timeObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+            messageDiv.innerHTML = `
+                ${!isSent ? `<div class="message-sender">${sender}</div>` : ''}
+                <div class="message-bubble">
+                    ${message}
+                    <div class="message-time">${timeStr}</div>
+                </div>
+            `;
+
+            messagesArea.appendChild(messageDiv);
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+
+        function addSystemMessage(message, isError = false) {
+            const messagesArea = document.getElementById('messagesArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.style.textAlign = 'center';
+            messageDiv.style.color = isError ? '#f44336' : '#4caf50';
+            messageDiv.style.fontSize = '12px';
+            messageDiv.style.margin = '10px 0';
+            messageDiv.textContent = message;
+            messagesArea.appendChild(messageDiv);
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Auto-login on page load if user has an active session
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedUsername = sessionStorage.getItem('currentUsername');
+            const savedToken = sessionStorage.getItem('authToken');
+            const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+
+            if (savedUsername && savedToken && isLoggedIn === 'true') {
+                // User was logged in and refreshed the page - auto-login
+                currentUsername = savedUsername;
+                authToken = savedToken;
+                startChat();
+            }
+            // If no active session, show login form (already visible by default)
+        });
+
+        function clearSavedUser() {
+            localStorage.removeItem('currentUsername');
+            document.getElementById('usernameInput').value = '';
+            document.getElementById('switchUserHint').style.display = 'none';
+            document.getElementById('usernameInput').focus();
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                // Close WebSocket
+                if (ws) {
+                    ws.close();
+                }
+
+                // Clear all session data (tab-specific)
+                sessionStorage.clear();
+
+                // Reload page to show login
+                location.reload();
+            }
+        }
+    </script>
+</body>
+
+</html>
