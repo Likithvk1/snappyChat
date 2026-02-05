@@ -24,9 +24,11 @@ export const WebSocketProvider = ({ children }) => {
         if (!user) return;
 
         const loadHistory = async () => {
+            const API_URL = import.meta.env.VITE_API_URL || '';
+
             try {
                 // Load friends and pending requests
-                const friendsResponse = await fetch(`/api/friend-request/list/${user.username}`);
+                const friendsResponse = await fetch(`${API_URL}/api/friend-request/list/${user.username}`);
                 const friendsData = await friendsResponse.json();
 
                 // Remove duplicates using Set
@@ -34,12 +36,12 @@ export const WebSocketProvider = ({ children }) => {
                 setPendingRequests(friendsData.pending || []);
 
                 // Load blocked users
-                const blockedResponse = await fetch(`/api/friend/blocked/${user.username}`);
+                const blockedResponse = await fetch(`${API_URL}/api/friend/blocked/${user.username}`);
                 const blockedData = await blockedResponse.json();
                 setBlockedUsers(blockedData.blocked || []);
 
                 // Load message history
-                const response = await fetch(`/api/history/${user.username}`);
+                const response = await fetch(`${API_URL}/api/history/${user.username}`);
                 const data = await response.json();
 
                 if (data.messages && data.messages.length > 0) {
@@ -102,9 +104,19 @@ export const WebSocketProvider = ({ children }) => {
 
         const connect = () => {
             // Logic to determine WS URL (using proxy path /ws)
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            // Vite proxy handles /ws request to backend
-            const wsUrl = `${protocol}//${window.location.host}/ws/${user.username}?token=${token}`;
+            const API_URL = import.meta.env.VITE_API_URL;
+            let wsUrl;
+
+            if (API_URL) {
+                // If remote API_URL is set (e.g., https://backend.com), use wss://backend.com/ws
+                const wsProtocol = API_URL.startsWith('https') ? 'wss:' : 'ws:';
+                const wsHost = API_URL.replace(/^https?:\/\//, '');
+                wsUrl = `${wsProtocol}//${wsHost}/ws/${user.username}?token=${token}`;
+            } else {
+                // Local development (using proxy)
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                wsUrl = `${protocol}//${window.location.host}/ws/${user.username}?token=${token}`;
+            }
 
             console.log("Connecting to WS:", wsUrl);
             const ws = new WebSocket(wsUrl);
@@ -259,7 +271,8 @@ export const WebSocketProvider = ({ children }) => {
 
     const sendFriendRequest = async (recipient) => {
         try {
-            const response = await fetch('/api/friend-request/send', {
+            const API_URL = import.meta.env.VITE_API_URL || '';
+            const response = await fetch(`${API_URL}/api/friend-request/send`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ sender: user.username, recipient })
@@ -279,7 +292,8 @@ export const WebSocketProvider = ({ children }) => {
 
     const respondFriendRequest = async (sender, action) => {
         try {
-            const response = await fetch('/api/friend-request/respond', {
+            const API_URL = import.meta.env.VITE_API_URL || '';
+            const response = await fetch(`${API_URL}/api/friend-request/respond`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ recipient: user.username, sender, action })
@@ -308,7 +322,8 @@ export const WebSocketProvider = ({ children }) => {
 
     const removeFriend = async (friend) => {
         try {
-            const response = await fetch('/api/friend/remove', {
+            const API_URL = import.meta.env.VITE_API_URL || '';
+            const response = await fetch(`${API_URL}/api/friend/remove`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: user.username, friend })
@@ -326,7 +341,8 @@ export const WebSocketProvider = ({ children }) => {
 
     const blockUser = async (blocked_user) => {
         try {
-            const response = await fetch('/api/friend/block', {
+            const API_URL = import.meta.env.VITE_API_URL || '';
+            const response = await fetch(`${API_URL}/api/friend/block`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: user.username, blocked_user })
@@ -345,7 +361,8 @@ export const WebSocketProvider = ({ children }) => {
 
     const unblockUser = async (blocked_user) => {
         try {
-            const response = await fetch('/api/friend/unblock', {
+            const API_URL = import.meta.env.VITE_API_URL || '';
+            const response = await fetch(`${API_URL}/api/friend/unblock`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: user.username, blocked_user })

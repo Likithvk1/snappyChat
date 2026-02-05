@@ -20,8 +20,8 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (username, password) => {
         try {
-            // NOTE: Remove /api prefix when proxy is active and handles rewrites
-            const response = await fetch('/api/login', {
+            const API_URL = import.meta.env.VITE_API_URL || '';
+            const response = await fetch(`${API_URL}/api/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password }),
@@ -50,7 +50,8 @@ export const AuthProvider = ({ children }) => {
 
     const register = async (username, password, confirmPassword) => {
         try {
-            const response = await fetch('/api/register', {
+            const API_URL = import.meta.env.VITE_API_URL || '';
+            const response = await fetch(`${API_URL}/api/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password, confirm_password: confirmPassword }),

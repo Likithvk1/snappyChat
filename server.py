@@ -13,6 +13,17 @@ from datetime import datetime, timedelta
 
 app = FastAPI()
 
+from fastapi.middleware.cors import CORSMiddleware
+
+# Enable CORS for Vercel/External access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # For production, replace with specific Vercel URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Serve static files
 # Mount assets (JS/CSS) only if they exist (produced by build)
 if os.path.exists("static/assets"):

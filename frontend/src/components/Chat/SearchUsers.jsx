@@ -19,7 +19,8 @@ const SearchUsers = ({ onClose, currentUser, existingContacts }) => {
         const timer = setTimeout(async () => {
             setLoading(true);
             try {
-                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+                const API_URL = import.meta.env.VITE_API_URL || '';
+                const response = await fetch(`${API_URL}/api/search?q=${encodeURIComponent(query)}`);
                 const data = await response.json();
 
                 // Filter out current user and existing contacts
