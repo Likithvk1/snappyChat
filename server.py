@@ -123,7 +123,7 @@ def verify_token(token: str) -> Optional[str]:
     except jwt.InvalidTokenError:
         return None
 
-@app.post("/register")
+@app.post("/api/register")
 async def register(user: UserRegister):
     """Register a new user."""
     # Validation
@@ -161,7 +161,7 @@ async def register(user: UserRegister):
         "username": user.username
     }
 
-@app.post("/login")
+@app.post("/api/login")
 async def login(user: UserLogin):
     """Login a user."""
     conn = sqlite3.connect(DB_NAME)
@@ -187,7 +187,7 @@ async def login(user: UserLogin):
         "username": user.username
     }
 
-@app.get("/history/{username}")
+@app.get("/api/history/{username}")
 async def get_history(username: str):
     """Get all message history for a user (sent and received)."""
     conn = sqlite3.connect(DB_NAME)
@@ -217,7 +217,7 @@ async def get_history(username: str):
     
     return {"messages": messages}
 
-@app.get("/search")
+@app.get("/api/search")
 async def search_users(q: str = ""):
     """Search for users by username (case-insensitive)."""
     if not q or len(q) < 1:
@@ -239,7 +239,7 @@ async def search_users(q: str = ""):
     users = [row[0] for row in rows]
     return {"users": users}
 
-@app.post("/friend-request/send")
+@app.post("/api/friend-request/send")
 async def send_friend_request(data: dict):
     """Send a friend request to another user."""
     sender = data.get("sender")
@@ -298,7 +298,7 @@ async def send_friend_request(data: dict):
     
     return {"success": True, "message": "Friend request sent"}
 
-@app.post("/friend-request/respond")
+@app.post("/api/friend-request/respond")
 async def respond_friend_request(data: dict):
     """Accept, reject, or block a friend request."""
     recipient = data.get("recipient")  # Person responding
@@ -346,7 +346,7 @@ async def respond_friend_request(data: dict):
     
     return {"success": True, "action": action}
 
-@app.get("/friend-request/list/{username}")
+@app.get("/api/friend-request/list/{username}")
 async def list_friend_requests(username: str):
     """Get pending friend requests for a user."""
     conn = sqlite3.connect(DB_NAME)
@@ -379,7 +379,7 @@ async def list_friend_requests(username: str):
     
     return {"pending": incoming, "friends": friends}
 
-@app.post("/friend/remove")
+@app.post("/api/friend/remove")
 async def remove_friend(data: dict):
     """Remove a friend (delete the friendship)."""
     username = data.get("username")
@@ -403,7 +403,7 @@ async def remove_friend(data: dict):
     
     return {"success": True, "message": "Friend removed"}
 
-@app.post("/friend/block")
+@app.post("/api/friend/block")
 async def block_friend(data: dict):
     """Block a user."""
     username = data.get("username")
@@ -426,7 +426,7 @@ async def block_friend(data: dict):
     
     return {"success": True, "message": "User blocked"}
 
-@app.post("/friend/unblock")
+@app.post("/api/friend/unblock")
 async def unblock_friend(data: dict):
     """Unblock a user."""
     username = data.get("username")
@@ -449,7 +449,7 @@ async def unblock_friend(data: dict):
     
     return {"success": True, "message": "User unblocked"}
 
-@app.get("/friend/blocked/{username}")
+@app.get("/api/friend/blocked/{username}")
 async def get_blocked_users(username: str):
     """Get list of blocked users."""
     conn = sqlite3.connect(DB_NAME)
