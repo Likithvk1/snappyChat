@@ -10,6 +10,8 @@ import os
 import bcrypt
 import jwt
 from datetime import datetime, timedelta
+import random
+import string
 
 app = FastAPI()
 
@@ -55,9 +57,17 @@ def init_db():
         CREATE TABLE IF NOT EXISTS users (
             username TEXT PRIMARY KEY,
             password_hash TEXT NOT NULL,
+            recovery_key_hash TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
-    ''')
+    ''') 
+    
+    # Check if recovery_key_hash column exists (for migration)
+    try:
+        cursor.execute("SELECT recovery_key_hash FROM users LIMIT 1")
+    except sqlite3.OperationalError:
+        cursor.execute("ALTER TABLE users ADD COLUMN recovery_key_hash TEXT")
+        print("Migrated DB: Added recovery_key_hash column")
     
     # Messages table
     cursor.execute('''
@@ -110,7 +120,20 @@ def create_access_token(username: str) -> str:
     """Create a JWT access token."""
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode = {"sub": username, "exp": expire}
+    to_encode = {"sub": username, "exp": expire}
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def generate_recovery_key() -> str:
+    """Generate a formatted recovery key (XXXX-XXXX-XXXX-XXXX)."""
+    chars = string.ascii_uppercase + string.digits
+    parts = [''.join(random.choices(chars, k=4)) for _ in range(4)]
+    return '-'.join(parts)
+
+class PasswordReset(BaseModel):
+    username: str
+    recovery_key: str
+    new_password: str
+    confirm_password: str
 
 def verify_token(token: str) -> Optional[str]:
     """Verify a JWT token and return the username."""
@@ -145,9 +168,13 @@ async def register(user: UserRegister):
         raise HTTPException(status_code=400, detail="Username already exists")
     
     # Create user
+    # Create user with recovery key
+    recovery_key = generate_recovery_key()
+    recovery_key_hash = hash_password(recovery_key)
+    
     password_hash = hash_password(user.password)
-    cursor.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)", 
-                   (user.username, password_hash))
+    cursor.execute("INSERT INTO users (username, password_hash, recovery_key_hash) VALUES (?, ?, ?)", 
+                   (user.username, password_hash, recovery_key_hash))
     conn.commit()
     conn.close()
     
@@ -158,8 +185,70 @@ async def register(user: UserRegister):
         "success": True,
         "message": "User registered successfully",
         "token": token,
-        "username": user.username
+        "username": user.username,
+        "recovery_key": recovery_key
     }
+
+@app.post("/api/auth/recovery-key")
+async def get_recovery_key(data: dict, token: str = None):
+    """Generate a new recovery key for the authenticated user."""
+    username = data.get("username")
+    
+    if not username:
+         raise HTTPException(status_code=400, detail="Username required")
+
+    req_token = data.get("token")
+    if not req_token:
+        raise HTTPException(status_code=401, detail="Authentication required")
+        
+    token_user = verify_token(req_token)
+    if not token_user or token_user != username:
+        raise HTTPException(status_code=403, detail="Invalid token")
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    new_key = generate_recovery_key()
+    key_hash = hash_password(new_key)
+    
+    cursor.execute("UPDATE users SET recovery_key_hash = ? WHERE username = ?", (key_hash, username))
+    conn.commit()
+    conn.close()
+    
+    return {"success": True, "recovery_key": new_key}
+
+@app.post("/api/auth/reset-password")
+async def reset_password(data: PasswordReset):
+    """Reset password using recovery key."""
+    if data.new_password != data.confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match")
+        
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT recovery_key_hash FROM users WHERE username = ?", (data.username,))
+    row = cursor.fetchone()
+    
+    if not row or not row[0]:
+        conn.close()
+        raise HTTPException(status_code=404, detail="User not found or no recovery key set")
+        
+    stored_hash = row[0]
+    
+    if not verify_password(data.recovery_key, stored_hash):
+        conn.close()
+        raise HTTPException(status_code=400, detail="Invalid recovery key")
+        
+    new_hash = hash_password(data.new_password)
+    
+    cursor.execute("UPDATE users SET password_hash = ? WHERE username = ?", (new_hash, data.username))
+    conn.commit()
+    conn.close()
+    
+    return {"success": True, "message": "Password reset successfully"}
 
 @app.post("/api/login")
 async def login(user: UserLogin):

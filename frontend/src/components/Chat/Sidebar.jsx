@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useWebSocket } from '../../context/WebSocketContext';
-import { LogOut, User, Plus, Search, MoreVertical, Settings, Bell } from 'lucide-react';
+import { LogOut, User, Plus, Search, MoreVertical, Settings, Bell, Shield, Key, Copy, Check } from 'lucide-react';
 import clsx from 'clsx';
 import SearchUsers from './SearchUsers';
 
 const Sidebar = ({ selectedContact, onSelectContact }) => {
-    const { user, logout } = useAuth();
+    const { user, logout, getRecoveryKey, token } = useAuth();
     const { contacts, unreadCounts, onlineUsers, pendingRequests, respondFriendRequest, blockedUsers, removeFriend, blockUser, unblockUser } = useWebSocket();
     const [isAdding, setIsAdding] = useState(false);
     const [openMenu, setOpenMenu] = useState(null); // Track which contact's menu is open
@@ -15,6 +15,22 @@ const Sidebar = ({ selectedContact, onSelectContact }) => {
     const [showNotifications, setShowNotifications] = useState(false); // Track notifications modal
     const [confirmation, setConfirmation] = useState(null); // { type: 'remove'|'block'|'unblock'|'logout', target: username, onConfirm: fn }
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false); // Track logout confirmation
+    const [generatedKey, setGeneratedKey] = useState(null); // Track generated recovery key
+    const [keyLoading, setKeyLoading] = useState(false);
+
+    const handleGenerateKey = async () => {
+        if (!confirm("This will invalidate any previous recovery key. Continue?")) return;
+
+        setKeyLoading(true);
+        const res = await getRecoveryKey(user.username, token);
+        if (res.success) {
+            setGeneratedKey(res.recovery_key);
+            setShowSettings(false); // Close settings to show key modal clearly
+        } else {
+            alert(res.error || "Failed to generate key");
+        }
+        setKeyLoading(false);
+    };
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -233,6 +249,26 @@ const Sidebar = ({ selectedContact, onSelectContact }) => {
                             )}
                         </div>
 
+                        {/* Security Section */}
+                        <div className="p-4 border-t border-slate-700 bg-slate-900/20">
+                            <h3 className="text-sm font-semibold text-slate-400 mb-3">SECURITY</h3>
+                            <button
+                                onClick={handleGenerateKey}
+                                disabled={keyLoading}
+                                className="w-full flex items-center justify-between bg-slate-700/50 hover:bg-slate-700 text-slate-200 p-3 rounded-xl transition-all group"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-400">
+                                        <Key className="w-4 h-4" />
+                                    </div>
+                                    <span className="font-medium">Recovery Key</span>
+                                </div>
+                                <span className="text-xs text-orange-400 bg-orange-500/10 px-2 py-1 rounded-lg border border-orange-500/20 group-hover:bg-orange-500/20 transition-colors">
+                                    {keyLoading ? 'Generating...' : 'Generate New'}
+                                </span>
+                            </button>
+                        </div>
+
                         {/* Account Section */}
                         <div className="p-4 border-t border-slate-700 bg-slate-900/20">
                             <h3 className="text-sm font-semibold text-slate-400 mb-3">ACCOUNT</h3>
@@ -380,6 +416,49 @@ const Sidebar = ({ selectedContact, onSelectContact }) => {
                 </div>,
                 document.body
             )}
+
+            {/* Generated Key Modal */}
+            {generatedKey && createPortal(
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[80]">
+                    <div className="bg-slate-800 border border-orange-500/30 rounded-2xl shadow-2xl p-6 w-96 text-center animate-in fade-in zoom-in duration-200 relative">
+                        <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-orange-500/20">
+                            <Shield className="w-8 h-8 text-white" />
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-2">New Recovery Key</h3>
+
+                        <div className="bg-orange-500/10 border border-orange-500/20 p-3 rounded-lg mb-4 text-left">
+                            <p className="text-orange-400 text-xs font-semibold mb-1">⚠️ IMPORTANT</p>
+                            <p className="text-slate-300 text-xs">
+                                Store this key safely. It is the ONLY way to recover your account. Any previous keys are now invalid.
+                            </p>
+                        </div>
+
+                        <div
+                            className="bg-slate-900 border border-slate-700 p-3 rounded-xl mb-6 relative group cursor-pointer"
+                            onClick={() => {
+                                navigator.clipboard.writeText(generatedKey);
+                                alert("Copied!");
+                            }}
+                        >
+                            <code className="block text-center text-lg text-emerald-400 font-mono tracking-widest break-all">
+                                {generatedKey}
+                            </code>
+                            <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
+                                <span className="text-white text-sm font-medium flex items-center gap-2"><Copy className="w-4 h-4" /> Copy</span>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => setGeneratedKey(null)}
+                            className="w-full bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                        >
+                            <Check className="w-4 h-4" /> I have saved it
+                        </button>
+                    </div>
+                </div>,
+                document.body
+            )}
+
         </div>
     );
 };
